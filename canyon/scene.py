@@ -865,7 +865,7 @@ def build_mesas(mat):
         tex.noise_scale = tex_scale
         tex.noise_depth = 4
         d.texture = tex
-        d.strength = 0.5
+        d.strength = 0.32
         # a wider foot and a worn top: a mesa, not a box
         tp = o.modifiers.new("t", "SIMPLE_DEFORM")
         tp.deform_method = "TAPER"
@@ -1238,7 +1238,7 @@ class Canyon:
         self.front = Cap(molten_material(), +1, 1.6, self.wall, self.plateau)
         self.back = Cap(rock, -1, 0.0, self.wall, self.plateau)
         build_ground(sand_material())
-        build_mesas(simple_material("FarRock", (0.11, 0.075, 0.06)))
+        build_mesas(simple_material("FarRock", (0.06, 0.045, 0.04)))
         self.river = River(river_material())
         build_releases(self.river)
         self.sparks = Sparks(emission_attr_material("Spark", 30.0))

@@ -104,9 +104,54 @@ def ring_mesh(name, k, width, mat, n=256):
 
 # ---------------------------------------------------------------- the sun
 
+def sun_material():
+    """A star, not a disc: granulated, darker and redder towards the limb,
+    so it keeps a surface instead of clipping to flat white."""
+    m = bpy.data.materials.new("Sun")
+    nt = m.node_tree
+    nt.nodes.clear()
+    out = node(nt, "ShaderNodeOutputMaterial", (900, 0))
+    em = node(nt, "ShaderNodeEmission", (700, 0))
+    tc = node(nt, "ShaderNodeTexCoord", (-700, 200))
+    gran = node(nt, "ShaderNodeTexNoise", (-500, 200), noise_dimensions="4D")
+    gran.inputs["Scale"].default_value = 9.0
+    gran.inputs["Detail"].default_value = 10.0
+    gran.inputs["Roughness"].default_value = 0.65
+    nt.links.new(tc.outputs["Object"], gran.inputs["Vector"])
+    for f, w in ((1, 0.0), (FRAMES + 1, FRAMES / FPS * 0.05)):  # the surface boils
+        gran.inputs["W"].default_value = w
+        gran.inputs["W"].keyframe_insert("default_value", frame=f)
+    lw = node(nt, "ShaderNodeLayerWeight", (-500, -100))
+    lw.inputs["Blend"].default_value = 0.35
+    limb = node(nt, "ShaderNodeMath", (-300, -100), operation="ADD")
+    nt.links.new(lw.outputs["Facing"], limb.inputs[0])
+    sub = node(nt, "ShaderNodeMath", (-300, 100), operation="MULTIPLY_ADD")
+    sub.inputs[1].default_value = 0.35
+    sub.inputs[2].default_value = -0.17
+    nt.links.new(gran.outputs["Fac"], sub.inputs[0])
+    nt.links.new(sub.outputs[0], limb.inputs[1])
+    ramp = node(nt, "ShaderNodeValToRGB", (-100, 0))
+    e = ramp.color_ramp.elements
+    e[0].position, e[0].color = 0.0, (1.0, 0.93, 0.78, 1)
+    e[1].position, e[1].color = 0.95, (0.85, 0.22, 0.04, 1)
+    e.new(0.55).color = (1.0, 0.62, 0.25, 1)
+    nt.links.new(limb.outputs[0], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
+    bright = node(nt, "ShaderNodeMath", (300, -200), operation="MULTIPLY")
+    inv = node(nt, "ShaderNodeMath", (100, -250), operation="SUBTRACT")
+    inv.inputs[0].default_value = 1.15
+    nt.links.new(limb.outputs[0], inv.inputs[1])
+    nt.links.new(inv.outputs[0], bright.inputs[0])
+    level = node(nt, "ShaderNodeValue", (100, -400))
+    nt.links.new(level.outputs[0], bright.inputs[1])
+    nt.links.new(bright.outputs[0], em.inputs["Strength"])
+    nt.links.new(em.outputs[0], out.inputs[0])
+    return m, level.outputs[0]
+
+
 class Sun:
     def __init__(self):
-        m, self.core = glow_material("Sun", (1.0, 0.86, 0.6), 18.0, blended=False)
+        m, self.core = sun_material()
         self.ob = sphere("Sun", 1.0, m, 64)
         self.ob.visible_shadow = False
         # no corona shell: blended over the inner planets it washed them
@@ -119,7 +164,7 @@ class Sun:
         link(bpy.data.objects.new("Sunlight", lamp))
 
     def update(self, frame, flare):
-        self.core.default_value = 18.0 + 30.0 * flare
+        self.core.default_value = 7.0 + 14.0 * flare
 
 
 # ---------------------------------------------------------------- planets

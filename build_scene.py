@@ -168,7 +168,7 @@ def build_mist():
     dens.inputs[1].default_value = 0.012
     nt.links.new(ex.outputs["Value"], dens.inputs[0])
     haze = node(nt, "ShaderNodeMath", (280, -150), operation="ADD")
-    haze.inputs[1].default_value = 0.0008
+    haze.inputs[1].default_value = 0.0003
     nt.links.new(dens.outputs["Value"], haze.inputs[0])
     nt.links.new(haze.outputs["Value"], vol.inputs["Density"])
     nt.links.new(vol.outputs["Volume"], out.inputs["Volume"])

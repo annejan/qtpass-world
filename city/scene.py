@@ -463,7 +463,7 @@ class Searchlights:
         for i in range(12):
             mi = m.copy()
             fade = [n for n in mi.node_tree.nodes if n.type == "VALUE"][0]
-            bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=0.25, radius2=9.0,
+            bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=0.2, radius2=5.0,
                                             depth=110, end_fill_type="NOTHING",
                                             location=(0, 0, 55))
             ob = bpy.context.active_object
