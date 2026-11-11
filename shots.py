@@ -85,7 +85,7 @@ SHOTS = [
                  (16.0, 6.0)], "world", [
         (0.0, (128, -285, 9), (168, 0, 62), 26, 0),
         (16.0, (131, -268, 8), (166, 0, 58), 26, 0)],
-     {"exposure": 0.5}),
+     {"exposure": 0.5, "releases": False}),
     # the first commit: a flare at the foot of the bare wall (8.0 s)
     linear(6.0, 14.0, "canyon", [
         (6.0, ("c-0.75", -0.85, 0.09), ("c+0.1", -0.15, 0.05), 40, 1.4),
@@ -184,11 +184,13 @@ SHOTS = [
         (121.5, ("c-12", -16.0, 5.0), ("c-1", 2, 12.0), 22, 0),
         (131.0, ("c+3", -14.0, 7.0), ("c-1", 3, 14.0), 22, 0)],
      {"exposure": -0.2}),
-    # today: the whole world, long lens, locked off
-    linear(131.0, 150.0, "world", [
-        (131.0, (360, -400, 12), (165, -30, 50), 40, 0),
-        (150.0, (348, -412, 12), (160, -30, 52), 40, 0)],
-     {"exposure": 0.6}),
+    # today: the opening ran time back; now all twelve years build up once
+    # more in one take, the camera arcing round the world, and land on today
+    timed(12.0, [(0.0, 0.0), (1.0, 1.5), (8.0, 128.0), (9.2, 131.6), (12.0, 134.0)], "world", [
+        (0.0, (40, -330, 22), (165, -20, 40), 28, 0),
+        (6.0, (175, -385, 34), (168, -20, 46), 28, 0),
+        (12.0, (318, -290, 30), (165, -20, 50), 28, 0)],
+     {"exposure": 0.55, "releases": False, "quiet": True}),
     # and up: out of the streets, past the rim, into the sky
     linear(150.0, 180.0, "world", [
         (150.0, (186, -118, 2.5), (200, -40, 14), 22, 0),
@@ -350,6 +352,7 @@ def camera(frame):
         "exposure": opts.get("exposure", 0.0),
         "labels": opts.get("labels", 0.0),
         "roll": opts.get("roll", 0),
+        "releases": opts.get("releases", True),
         "shot": i,
         "world": wf,
     }
@@ -418,12 +421,13 @@ def cards():
         (107.9, 112.3, "16 – 17 September", f"{s['split']} classes pulled off in two days"),
         (121.6, 130.4, "the past, rewritten",
          f"{s['replaced_pct']}% of the older code replaced this year"),
-        (133.0, 146.0, "today",
-         f"{s['lines_now']:,} lines · {s['tests']:,} tests · {s['classes']} classes"),
     ]
     out = [(0.6, 6.2, "centre", "QtPass", "one world: its history, its tests, its classes")]
     out += [(round(film(w0), 2), round(film(w1), 2), "lower", big, small)
             for w0, w1, big, small in world]
+    land = film_times(131.0)[-1]  # the last fast-forward reaches today
+    out.append((round(land - 0.3, 2), round(land + 6.0, 2), "lower", "today",
+                f"{s['lines_now']:,} lines · {s['tests']:,} tests · {s['classes']} classes"))
     out.append((round(film(164.0), 2), round(FILM_SECONDS - 0.6, 2), "centre", "QtPass",
                 f"{s['commits']:,} commits · {s['authors']} contributors · "
                 f"{s['locales']} languages · twelve years"))

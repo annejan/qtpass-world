@@ -274,7 +274,7 @@ class World:
         w = v["world"]
         s = bpy.context.scene
         s.frame_set(int(w), subframe=w - int(w))  # keyed lamps and fades
-        self.canyon.update(w)
+        self.canyon.update(w, v.get("releases", True))
         self.city.update(w)
         self.planets.update(w, v["cam"], v.get("labels", 1.0))
 

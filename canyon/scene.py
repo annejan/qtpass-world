@@ -26,6 +26,7 @@ ROOT = None
 FLARE = 1          # frame of the first commit's flare
 SCALE = 1.0        # metres in the world per metre of the canyon film
 LIGHT = 1.0        # lamp energy for that scale (inverse square)
+RELEASES = []      # beacons, flashes and names: hidden when time runs fast
 
 
 def link(ob):
@@ -941,6 +942,7 @@ def build_releases(river):
             ob.visible_shadow = False
             m, fade = beacon_material(ob.name)
             ob.data.materials.append(m)
+            RELEASES.append(ob)
             for f, v in ((f0 - 3, 0), (f0 + 4, 1), (f0 + int(2.5 * FPS), 0.25),
                          (f0 + 7 * FPS, 0)):
                 fade.default_value = v * gain
@@ -951,6 +953,7 @@ def build_releases(river):
         lo = bpy.data.objects.new(ld.name, ld)
         lo.location = (x, -1.2 - top * 0.15, 0.6 + top * 0.4)
         link(lo)
+        RELEASES.append(lo)
         peak = 60 + 40 * top * top
         for f, v in ((f0 - 3, 0), (f0 + 3, peak), (f0 + 3 * FPS, peak * 0.08),
                      (f0 + 6 * FPS, 0)):
@@ -961,6 +964,7 @@ def build_releases(river):
         size = min(max(top * 0.055, 0.13), 0.9)
         z = max(top * 0.45, 0.1)
         txt = add_text(t["name"], (x, -0.95 - size * 0.3, z), size, tag_mat)
+        RELEASES.append(txt)
         for f, s in ((f0 - 1, 0.001), (f0 + 8, 1.0), (f0 + 5 * FPS, 1.0),
                      (f0 + 6 * FPS, 0.001)):
             txt.scale = (s, s, s)
@@ -1257,7 +1261,11 @@ class Canyon:
             bpy.context.scene.collection.objects.unlink(ob)
             link(ob)
 
-    def update(self, f):
+    def update(self, f, releases=True):
+        """World frame f; releases=False hides the release beacons (a clock
+        racing through 44 releases would only strobe them)."""
+        for ob in RELEASES:
+            ob.hide_render = not releases
         st = wall_state(f)
         self.wall.update(st)
         self.plateau.update(st)

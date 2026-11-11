@@ -73,12 +73,19 @@ def hz(midi):
 STEMS = {k: np.zeros((N, 2)) for k in ("bed", "canyon", "city", "planets", "all")}
 
 
+# shots where time races (the fast-forward): the world keeps its sounds to
+# itself there, or every commit and release would go off at once
+QUIET = [(shots.STARTS[i], shots.STARTS[i] + sh["dur"]) for i, sh in enumerate(shots.SHOTS)
+         if sh["opts"].get("quiet")]
+
+
 def add(stem, t, g, pan=0.5, amp=1.0, world=True):
     """Mix mono g into a stem at world second t (at every film moment that
     shows it), or at film second t with world=False; panned 0 .. 1."""
     if world:
         for tf in film_times(t):
-            add(stem, tf, g, pan, amp, world=False)
+            if not any(a <= tf < b for a, b in QUIET):
+                add(stem, tf, g, pan, amp, world=False)
         return
     out = STEMS[stem]
     i = int(t * SR)
@@ -171,6 +178,20 @@ cymbal = bandpass(rng.standard_normal(L), 3000, 12000) * np.exp(-tt * 2.0)
 rev[-L:] = cymbal[::-1]
 for ch in range(2):
     STEMS["all"][a:b, ch] += (whoosh * 0.18 + sweep * 0.05 + rev * 0.12) * (1 if ch else 0.92)
+
+# the fast-forward: the rewind's mirror, a rising sweep that lands on today
+for q0, q1 in QUIET:
+    a, b = int((q0 + 0.6) * SR), int((q0 + 9.4) * SR)
+    tr = np.arange(b - a) / SR
+    u = tr / tr[-1]
+    swell = bandpass(rng.standard_normal(b - a), 300, 7000) * np.sin(np.pi * u) ** 1.2
+    sweep = np.sin(2 * np.pi * np.cumsum(70 + 700 * u ** 2) / SR) * np.sin(np.pi * u) ** 2
+    for ch in range(2):
+        STEMS["all"][a:b, ch] += (swell * 0.16 + sweep * 0.045) * (1 if ch else 0.92)
+    land = shots.film_times(131.0)[-1]
+    bell("all", land, hz(74), 0.12, 0.45, decay=5, world=False)
+    bell("all", land + 0.03, hz(78), 0.07, 0.55, decay=5, world=False)
+    bell("all", land + 0.06, hz(81), 0.06, 0.5, decay=5, world=False)
 
 # ---------------------------------------------------------------- canyon
 # a soft ping for every commit as the front passes it, pitched by author
