@@ -41,8 +41,9 @@ KEYS = [
     (26, ts("2015-12-31")),                             # MainWindow, the first layers
     (33, ts("2016-11-12")),
     (40, ts("2016-12-20")),                             # the first split, the first test
-    (45, ts("2017-12-20")),
-    (51, ts("2018-01-25")),                             # the CVE, and v1.2.1
+    (44.5, ts("2017-12-19")),
+    (50, ts("2018-01-06")),                             # the CVE reported, v1.2.1 seals it
+    (51.5, ts("2018-01-25")),
     (55, ts("2018-03-25")),                             # datahelpers in three
     (58, ts("2018-09-15")),
     (62, ts("2018-10-01")),                             # QtPass split off

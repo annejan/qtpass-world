@@ -114,14 +114,15 @@ SHOTS = [
         (40.0, (-2.6, -6.5, 1.1), (0.0, 0.0, 0.7), 34, 0),
         (44.0, (-4.0, -14.0, 1.6), (6.0, -5.0, 1.0), 28, 0)],
      {"hand": 0.02}),
-    # January 2018: the CVE, a red fault in the rock (47.2 s), sealed by v1.2.1
-    linear(44.0, 52.5, "canyon", [
+    # 22 December 2017: the CVE, a red fault in the rock, until v1.2.1 seals
+    # it on 4 January
+    linear(44.0, 53.0, "canyon", [
         (44.0, ("c-5", -4.2, 1.4), ("c-0.5", 0, 1.0), 28, 1.9),
-        (52.5, ("c-4", -3.2, 1.2), ("c-0.2", 0, 0.9), 30, 1.9)],
+        (53.0, ("c-4", -3.2, 1.2), ("c-0.2", 0, 0.9), 30, 1.9)],
      {"exposure": -0.4, "hand": 0.01}),
     # 2018: datahelpers in three (54.9 s), then QtPass splits off (60.7 s)
-    linear(52.5, 62.5, "planets", [
-        (52.5, (2, -16, 7), (0, 0, 0), 28, 0),
+    linear(53.0, 62.5, "planets", [
+        (53.0, (2, -16, 7), (0, 0, 0), 28, 0),
         (62.5, (4, -18, 8), (0, 0, 0), 28, 0)],
      {"roll": 1, "labels": 1}),
     # seven quiet years: the front runs along the wall at night, and 2026
@@ -405,7 +406,7 @@ def cards():
         (22.0, 29.2, "2015", f"v1.0.0 · {s['commits_2015']:,} commits that year"),
         (30.6, 37.0, "November 2016", "Pass, ImitatePass and RealPass split off MainWindow"),
         (38.2, 43.5, "13 December 2016", "the first test: “LOL wut, also how do I link ..”"),
-        (44.6, 51.4, "January 2018", "CVE-2017-18021, sealed by v1.2.1"),
+        (44.8, 51.2, "22 December 2017", "CVE-2017-18021 reported; v1.2.1 seals it on 4 January"),
         (52.6, 57.2, "March 2018", "datahelpers breaks into three"),
         (57.6, 61.6, "September 2018",
          "QtPass splits off MainWindow: “It compiles, ship it . .”"),

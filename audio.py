@@ -219,7 +219,8 @@ bell("canyon", C.t_of(shots.FIRST_COMMIT_FLARE), hz(74), 0.22, decay=4.5)
 
 # CVE-2017-18021: the fault cracks open over a tritone that does not belong
 # to D, then v1.2.1 seals it and the tension resolves
-t_cve = C.t_of(CANYON.frame_of_x(CANYON.x_at_ts(datetime.fromisoformat("2018-01-02").timestamp())))
+t_cve = C.t_of(CANYON.frame_of_x(CANYON.x_at_ts(datetime.fromisoformat("2017-12-22").timestamp())))
+t_fix = C.t_of(CANYON.frame_of_x(CANYON.x_at_ts(datetime.fromisoformat("2018-01-04").timestamp())))
 L = int(0.9 * SR)
 tt = np.arange(L) / SR
 snap = (rng.random(L) < 0.02 * np.exp(-tt * 6)) * rng.standard_normal(L)
@@ -232,8 +233,8 @@ cluster *= np.minimum(t2 / 0.05, 1) * np.exp(-t2 * 1.8) * 0.05
 add("canyon", t_cve, snap, 0.45, 0.12)
 add("canyon", t_cve, snap[::-1][::-1], 0.55, 0.12)
 add("canyon", t_cve, cluster, 0.5, 1.0)
-bell("canyon", t_cve + 1.5, hz(74), 0.12, decay=3.0)
-bell("canyon", t_cve + 1.52, hz(81), 0.06, decay=3.0)
+bell("canyon", t_fix + 0.1, hz(74), 0.12, decay=3.0)  # v1.2.1 seals it
+bell("canyon", t_fix + 0.12, hz(81), 0.06, decay=3.0)
 
 # the 2026 eruption: rumble and crackle
 rum = lowpass(rng.standard_normal(N), 90, 4) * 6 + 0.4 * np.sin(2 * np.pi * 33 * T)

@@ -1111,18 +1111,21 @@ class FrontLight:
 
 # ---------------------------------------------------------------- CVE
 
-CVE_DAY = "2018-01-02"     # CVE-2017-18021, fixed (#342) and released in v1.2.1
-CVE_LEN = 6 * FPS          # on screen this long, then gone without a trace
+CVE_DAY = "2017-12-22"     # CVE-2017-18021 reported (#338, zx2c4)
+CVE_FIXED = "2018-01-04"   # v1.2.1 released with the fix (#342)
+SEAL, COOL = 10, 98        # frames the seal, then the cooling, take
 
 
 class Crack:
-    """CVE-2017-18021: a red fault runs up the wall where the fix landed,
-    then v1.2.1 seals it white-hot and it cools away. Hidden outside its
-    window, so only those frames change."""
+    """CVE-2017-18021: a red fault runs up the wall the day it is reported,
+    stays open until v1.2.1 seals it white-hot, and cools away. Hidden
+    outside its window, so only those frames change."""
 
     def __init__(self, wall):
         self.wall = wall
         self.f0 = TL.frame_of_x(TL.X(CVE_DAY))
+        self.open = max(TL.frame_of_x(TL.X(CVE_FIXED)) - self.f0, 36)  # frames
+        self.len = self.open + SEAL + COOL
         self.k = int(np.argmin(np.abs(XK - TL.X(CVE_DAY))))
         rnd = random.Random(18021)
         # a main fault and three branches: (u along the height, dx, width)
@@ -1167,7 +1170,7 @@ class Crack:
         self.texts = [
             add_text("CVE-2017-18021", (x - 0.3, -1.05, 0.70 * h), 0.16, red,
                      align="RIGHT"),
-            add_text("predictable passwords · fixed in v1.2.1",
+            add_text("predictable passwords · reported 22 December 2017 · fixed in v1.2.1",
                      (x - 0.31, -1.05, 0.70 * h - 0.17), 0.075, warm, align="RIGHT"),
         ]
         self.update(None, 1)  # start hidden
@@ -1177,26 +1180,26 @@ class Crack:
         grow = min(max(a / 10, 0), 1)
         flick = 1 + 0.25 * math.sin(a * 1.7) * math.sin(a * 0.63 + 1)
         red, white = np.array((1.0, 0.07, 0.03)), np.array((1.0, 0.86, 0.62))
-        if a < 36:                                   # the fault, glowing red
+        if a < self.open:                            # the fault, glowing red
             return grow, red, 4.5 * flick, 1.0
-        if a < 46:                                   # v1.2.1 seals it
-            u = (a - 36) / 10
+        if a < self.open + SEAL:                     # v1.2.1 seals it
+            u = (a - self.open) / SEAL
             return 1, red + (white - red) * u, 4.5 + 18 * u, 1.0 + 0.3 * u
-        u = min((a - 46) / (CVE_LEN - 46), 1)        # and it cools away
+        u = min((a - self.open - SEAL) / COOL, 1)    # and it cools away
         c = white + (np.array((1.0, 0.45, 0.15)) - white) * min(u * 2, 1)
         return 1, c, 22.5 * (1 - u) ** 2.5, 1.3 - u
 
     def update(self, st, frame):
         a = frame - self.f0
-        on = 0 <= a < CVE_LEN
+        on = 0 <= a < self.len
         for ob in [self.ob, self.lo] + self.texts:
             ob.hide_render = ob.hide_viewport = not on
         if not on:
             self.ld.energy = 0
             return
         s = 0.001 if a < 2 else min((a - 2) / 8, 1)
-        if a > CVE_LEN - 24:
-            s = max((CVE_LEN - a) / 24, 0.001)
+        if a > self.len - 24:
+            s = max((self.len - a) / 24, 0.001)
         for t in self.texts:
             t.scale = (s, s, s)
         k = self.k
@@ -1215,10 +1218,10 @@ class Crack:
                 self.co[i + 1] = (x0 + dx + half, y, z)
                 i += 2
         set_co(self.ob, self.co)
-        zl = 0.72 * top  # the name, on the face just left of the fault
+        zl = 0.5 * top  # the name, on the face just left of the fault, mid-height
         yl = float(np.interp(zl, zs, ys)) - 0.18
-        self.texts[0].location = (x0 - 0.15, yl, zl)
-        self.texts[1].location = (x0 - 0.16, yl, zl - 0.17)
+        self.texts[0].location = (x0 - 0.38, yl, zl)
+        self.texts[1].location = (x0 - 0.39, yl, zl - 0.17)
         self.em.inputs["Color"].default_value = (*rgb, 1.0)
         self.em.inputs["Strength"].default_value = strength
         self.ld.color = tuple(rgb)
