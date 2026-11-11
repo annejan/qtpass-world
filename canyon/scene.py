@@ -952,6 +952,7 @@ def build_releases(river):
         ld = bpy.data.lights.new(f"Flash {t['name']}", "POINT")
         ld.color = (1.0, 0.82, 0.55)
         ld.shadow_soft_size = 0.3 * SCALE
+        ld.use_shadow = False  # 44 flashes: their shadows cost more than they show
         lo = bpy.data.objects.new(ld.name, ld)
         lo.location = (x, -1.2 - top * 0.15, 0.6 + top * 0.4)
         link(lo)

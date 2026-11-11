@@ -3,7 +3,7 @@
 
 count_tests.py QTPASS_REPO [REV] [OUTDIR]   -> OUTDIR/tests.json, tags.json, commits.json
 
-REV defaults to main; the film uses bb0fad7a9 (4 November 2026). OUTDIR
+REV defaults to main; the film uses acce8abde (10 November 2026). OUTDIR
 defaults to data. Sampled at every first-parent commit up to REV that
 touched tests/, and once a week besides, so the CI count (workflow files:
 the searchlights) follows too. A test function is a `void name();`

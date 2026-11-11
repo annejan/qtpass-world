@@ -379,9 +379,10 @@ def build_ground():
     nt.links.new(street.outputs[0], st.inputs[0])
     nt.links.new(self_street.outputs[0], st.inputs[1])
     bsdf = node(nt, "ShaderNodeBsdfPrincipled", (500, 100))
-    # wet asphalt in town, giving way to the canyon's sand along a ragged
-    # edge (the distance from the centre, pushed about by noise), and
-    # fading out altogether beyond it so the plane itself is never seen
+    # wet asphalt in town, giving way to sand along a ragged edge (the
+    # distance from the centre, pushed about by noise). The plane is the
+    # plain itself, far beyond the town: an edge that fades out instead
+    # (dithered alpha) nearly doubles the render time
     rag = node(nt, "ShaderNodeTexNoise", (-700, -600))
     rag.inputs["Scale"].default_value = 0.045
     rag.inputs["Detail"].default_value = 3.0
@@ -394,13 +395,17 @@ def build_ground():
     sand.inputs["From Min"].default_value = 56.0
     sand.inputs["From Max"].default_value = 92.0
     nt.links.new(far.outputs[0], sand.inputs["Value"])
-    gone = node(nt, "ShaderNodeMapRange", (-300, -750))
-    gone.inputs["From Min"].default_value = 84.0
-    gone.inputs["From Max"].default_value = 104.0
-    nt.links.new(far.outputs[0], gone.inputs["Value"])
+    dune = node(nt, "ShaderNodeTexNoise", (-100, 600))
+    dune.inputs["Scale"].default_value = 0.02
+    dune.inputs["Detail"].default_value = 6.0
+    nt.links.new(tc.outputs["Object"], dune.inputs["Vector"])
+    sandy = node(nt, "ShaderNodeValToRGB", (100, 600))
+    sandy.color_ramp.elements[0].color = (0.17, 0.11, 0.07, 1)
+    sandy.color_ramp.elements[1].color = (0.34, 0.25, 0.17, 1)
+    nt.links.new(dune.outputs["Fac"], sandy.inputs["Fac"])
     base = node(nt, "ShaderNodeMix", (300, 300), data_type="RGBA")
     base.inputs["A"].default_value = (0.02, 0.021, 0.026, 1)
-    base.inputs["B"].default_value = (0.25, 0.18, 0.12, 1)
+    nt.links.new(sandy.outputs["Color"], base.inputs["B"])
     nt.links.new(sand.outputs[0], base.inputs["Factor"])
     nt.links.new(base.outputs["Result"], bsdf.inputs["Base Color"])
     noise = node(nt, "ShaderNodeTexNoise", (-200, 350))
@@ -416,14 +421,10 @@ def build_ground():
     nt.links.new(matte.outputs["Result"], bsdf.inputs["Roughness"])
     bsdf.inputs["Emission Color"].default_value = (1.0, 0.55, 0.2, 1)
     nt.links.new(st.outputs[0], bsdf.inputs["Emission Strength"])
-    clear = node(nt, "ShaderNodeBsdfTransparent", (500, -150))
-    fadeout = node(nt, "ShaderNodeMixShader", (720, 0))
-    nt.links.new(gone.outputs[0], fadeout.inputs["Fac"])
-    nt.links.new(bsdf.outputs[0], fadeout.inputs[1])
-    nt.links.new(clear.outputs[0], fadeout.inputs[2])
-    nt.links.new(fadeout.outputs[0], out.inputs[0])
-    # just under the streets' zero, clear of the canyon's river at 0
-    bpy.ops.mesh.primitive_plane_add(size=180, location=(0, 0, -0.03))
+    nt.links.new(bsdf.outputs[0], out.inputs[0])
+    # just under the streets' zero, clear of the canyon's river at 0, and
+    # over the canyon's own (flat-coloured) sand as far as anyone can see
+    bpy.ops.mesh.primitive_plane_add(size=4000, location=(0, 0, -0.03))
     g = bpy.context.active_object
     g.name = "Ground"
     g.data.materials.append(m)

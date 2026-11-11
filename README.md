@@ -47,7 +47,8 @@ blender -b --factory-startup -P build_scene.py -- --stills 73,2809 --pct 25
 
 The data of each part is regenerated as in its own repository (see the
 pipelines there); `canyon/prep.py`, `city/count_tests.py` and
-`planets/count_files.py` are the counting scripts.
+`planets/count_files.py` are the counting scripts. All three are counted at
+QtPass `acce8abde` (10 November 2026).
 
 4620 frames at 24 fps (3:12), 3840x1608 (2.39:1) at 100 %.
 
