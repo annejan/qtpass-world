@@ -276,7 +276,7 @@ class World:
         s.frame_set(int(w), subframe=w - int(w))  # keyed lamps and fades
         self.canyon.update(w, v.get("releases", True))
         self.city.update(w, v["calm"], v["sweep"])
-        self.planets.update(w, v["cam"], v.get("labels", 1.0), v["calm"])
+        self.planets.update(w, v["cam"], v.get("labels", 1.0), v["calm"], v["card"])
 
 
 def main():

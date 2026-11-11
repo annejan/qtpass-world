@@ -41,7 +41,7 @@ and all but stops the clock on the peak while the camera moves on.
 ```sh
 python3 audio.py audio.wav
 blender -b --factory-startup -P build_scene.py -- --stills 73,2809 --pct 25
-./render_chunks.sh 1 4790 25 8 frames            # low-res, resumes after a crash
+./render_chunks.sh 1 4620 25 8 frames            # low-res, resumes after a crash
 ./finish.sh renders/frames qtpass-world.mp4
 ```
 
@@ -49,7 +49,7 @@ The data of each part is regenerated as in its own repository (see the
 pipelines there); `canyon/prep.py`, `city/count_tests.py` and
 `planets/count_files.py` are the counting scripts.
 
-4790 frames at 24 fps (3:20), 3840x1608 (2.39:1) at 100 %.
+4620 frames at 24 fps (3:12), 3840x1608 (2.39:1) at 100 %.
 
 Needs Blender 5.1, Python 3 with numpy, scipy, Pillow and matplotlib, and ffmpeg.
 The Lato fonts come with it, in `assets/fonts/`.

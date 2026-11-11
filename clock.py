@@ -136,7 +136,9 @@ def dawn(t):
 
 # ------------------------------------------------------------ 2026
 
-CLIMAX = sec_of_date(ts("2026-09-22T14:00"))  # the most windows lighting at once
+# 22 September 2026, 02:32 to 02:55: 214 tests land in three commits, the
+# most windows lighting at once
+CLIMAX = sec_of_date(ts("2026-09-22T02:54"))
 
 
 def eruption(t):

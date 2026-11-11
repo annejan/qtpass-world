@@ -19,9 +19,9 @@ python3 "$here/cards.py" "$width" "$height" "$cards"
 
 inputs=(-framerate 24 -i "$frames/f_%04d.png")
 f="[0:v]format=gbrp,split[base][hi];"
-f+="[hi]curves=all='0/0 0.62/0 1/1',gblur=sigma=$sigma[glow];"
+f+="[hi]curves=all='0/0 0.5/0 1/1',gblur=sigma=$sigma[glow];"
 f+="[base][glow]blend=all_mode=screen:all_opacity=0.55,"
-f+="vignette=angle=PI/4.5,noise=alls=5:allf=t,"
+f+="vignette=angle=PI/6,noise=alls=5:allf=t,"
 f+="fade=t=in:st=0:d=1,fade=t=out:st=$fade_at:d=2.5[v0];"
 n=0
 while read -r png t0 dur out_at; do

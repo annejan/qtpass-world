@@ -338,12 +338,11 @@ class Planet:
         # outline as the camera sees it, so it never runs across its planet
         d = math.dist(cam_loc, (x, y, z))
         up = cam_rot @ Vector((0.0, 1.0, 0.0))
-        gap = r * 1.06 + 0.1 + 0.02 * d
+        gap = r * 1.16 + 0.1 + 0.02 * d
         self.label.rotation_quaternion = cam_rot
         self.label.location = (x + up.x * gap, y + up.y * gap, z + up.z * gap)
-        self.label.scale = [0.05 * d + 0.2] * 3
-        self.label_glow.default_value = 2.0 * g
-        self.label.hide_render = g < 0.02
+        self.label.scale = [0.06 * d + 0.24] * 3
+        self.shown = g  # Planets.declutter has the last word
 
 
 # ---------------------------------------------------------------- releases
@@ -398,7 +397,9 @@ class Planets:
         self.scale = scale
         self.cam = cam
         self.sun = Sun()
-        self.planets = [Planet(k, cam) for k in S.ORDER]
+        final = {k: max(b.get(k, 0) for b in S.SIZES) for k in S.ORDER}
+        self.planets = sorted((Planet(k, cam) for k in S.ORDER),
+                              key=lambda p: (p.k != "mainwindow", -final[p.k]))
         self.waves = Shockwaves()
         self.liquid = Liquid(self.planets)
         self.bodies = bpy.data.collections.new("Planet bodies")
@@ -413,11 +414,45 @@ class Planets:
                 ob.parent = self.root
         self.labels = 1.0
 
+    def declutter(self, seen, card):
+        """Names give way on screen: to the frame's edge, to the chapter
+        card's corner while one is up (card: how much of it, and how far
+        right it reaches), and to the names of bigger classes. Every step
+        is gradual, so nothing pops."""
+        cd = self.cam.data
+        k0 = cd.lens / (cd.sensor_width / 2)
+        s = bpy.context.scene.render
+        top = s.resolution_y / s.resolution_x  # half the frame's height; its half width is 1
+        to_cam = seen.inverted() @ self.root.matrix_world
+        strength, right = card
+        boxes = []
+        for p in self.planets:
+            g = p.shown
+            c = to_cam @ p.label.location
+            if g < 0.02 or c.z > -0.01:
+                p.label.hide_render = True
+                continue
+            k = k0 / -c.z
+            size = 0.32 * p.label.scale[0] * self.scale * k
+            hw, hh = 0.28 * size * len(p.label.data.body), 0.45 * size
+            x, y = c.x * k, c.y * k + hh
+            f = min(max(min(1 - abs(x) - hw, top - abs(y) - hh) / 0.03, 0.0), 1.0)
+            # a chapter card stands top left: x from the left edge to the
+            # middle, y down to a quarter of the height
+            inside = min(right + 0.03 - (x - hw), (y + hh) - (top - 0.27 * 2 * top))
+            f *= 1 - strength * min(max(inside / 0.04, 0.0), 1.0)
+            for x2, y2, hw2, hh2, f2 in boxes:
+                over = min(hw + hw2 - abs(x - x2), hh + hh2 - abs(y - y2))
+                f *= 1 - f2 * min(max(over / hh, 0.0), 1.0)
+            boxes.append((x, y, hw, hh, f * min(g, 1.0)))
+            p.label_glow.default_value = 2.0 * g * f
+            p.label.hide_render = g * f < 0.02
+
     def local(self, p):
         """A world point in the system's own coordinates."""
         return tuple(self.root.matrix_world.inverted() @ Vector(p))
 
-    def update(self, f, cam_world, labels=1.0, calm=1.0):
+    def update(self, f, cam_world, labels=1.0, calm=1.0, card=(0.0, -1.0)):
         bpy.context.view_layer.update()
         cam = self.local(cam_world)
         # the camera's turn (with its tracking and roll), in the system's frame
@@ -427,5 +462,6 @@ class Planets:
         self.sun.update(f, flare)
         for p in self.planets:
             p.update(f, cam, rot, labels)
+        self.declutter(seen, card)
         if os.environ.get("LIQUID", "1") != "0":
             self.liquid.update()  # planets that touch run together

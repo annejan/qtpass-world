@@ -375,7 +375,7 @@ FOCUS = {"canyon": (1.0, 0.3, 0.3), "city": (0.3, 1.0, 0.3),
 gains = np.zeros((int(SECONDS * 20) + 1, 3))
 for n in range(len(gains)):
     space_ = shots.SHOTS[shots.shot_index(n / 20)]["space"]
-    space_ = "planets" if space_.startswith("follow:") else space_
+    space_ = "planets" if ":" in space_ else space_  # follow:<class>, under:<class>
     gains[n] = FOCUS[space_]
 k = int(0.3 * 20)  # ease over 0.3 s round each cut
 kernel = np.ones(k) / k
