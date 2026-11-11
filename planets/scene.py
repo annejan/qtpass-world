@@ -9,6 +9,7 @@ import os
 
 import bpy
 import numpy as np
+from mathutils import Vector
 
 from . import system as S
 from . import timeline as TL
@@ -298,12 +299,9 @@ class Planet:
         cu.materials.append(lm)
         self.label = link(bpy.data.objects.new("Label " + k, cu))
         self.label.visible_shadow = False
-        c = self.label.constraints.new("TRACK_TO")
-        c.target = cam
-        c.track_axis = "TRACK_Z"
-        c.up_axis = "UP_Y"
+        self.label.rotation_mode = "QUATERNION"
 
-    def update(self, frame, cam_loc, labels=1.0):
+    def update(self, frame, cam_loc, cam_rot, labels=1.0):
         k = self.k
         on = TL.alive(k, frame)
         r = TL.size(k, frame) if on else 0.0
@@ -334,8 +332,14 @@ class Planet:
         fresh = min(max(4 - age, 0.0), 1.0) if age >= 0 else 0.0
         g = 0.0 if hidden else max(big, fresh, 1.0 if k == "mainwindow" else 0.0)
         g *= labels
+        # a billboard: turned as the camera is, so the name is level on
+        # screen however the camera rolls, and set above the planet's
+        # outline as the camera sees it, so it never runs across its planet
         d = math.dist(cam_loc, (x, y, z))
-        self.label.location = (x, y, z + r + 0.12 + 0.02 * d)
+        up = cam_rot @ Vector((0.0, 1.0, 0.0))
+        gap = r * 1.06 + 0.1 + 0.02 * d
+        self.label.rotation_quaternion = cam_rot
+        self.label.location = (x + up.x * gap, y + up.y * gap, z + up.z * gap)
         self.label.scale = [0.05 * d + 0.2] * 3
         self.label_glow.default_value = 2.0 * g
         self.label.hide_render = g < 0.02
@@ -390,6 +394,7 @@ class Planets:
         self.root.rotation_euler = rotation
         self.root.scale = [scale] * 3
         self.scale = scale
+        self.cam = cam
         self.sun = Sun()
         self.planets = [Planet(k, cam) for k in S.ORDER]
         self.waves = Shockwaves()
@@ -406,13 +411,15 @@ class Planets:
 
     def local(self, p):
         """A world point in the system's own coordinates."""
-        from mathutils import Vector
         return tuple(self.root.matrix_world.inverted() @ Vector(p))
 
     def update(self, f, cam_world, labels=1.0):
         bpy.context.view_layer.update()
         cam = self.local(cam_world)
+        # the camera's turn (with its tracking and roll), in the system's frame
+        seen = self.cam.evaluated_get(bpy.context.evaluated_depsgraph_get()).matrix_world
+        rot = self.root.matrix_world.to_quaternion().inverted() @ seen.to_quaternion()
         flare = self.waves.update(f)
         self.sun.update(f, flare)
         for p in self.planets:
-            p.update(f, cam, labels)
+            p.update(f, cam, rot, labels)
