@@ -14,13 +14,16 @@ from.
 All three read the date from the same clock, so a release flares in the rock,
 over the town and round the sun at once, and September 2026 hits all three in
 the same frames. The film cuts between them and to wide shots of the whole
-world.
+world, and keeps its own time: it opens on the finished world and runs
+twelve years back to the first commit, sees 22 September three times over,
+and all but stops the clock on the peak while the camera moves on.
 
 ## Files
 
 - `clock.py`: the one clock (which date it is at every frame), the sky (dusk,
   night, dawn) and the 2026 eruption
-- `shots.py`: where the parts stand, the shots and their cuts, and the titles
+- `shots.py`: where the parts stand, the shots and their cuts, which stretch
+  of the world's clock each shot shows and how fast, and the titles
 - `canyon/`, `city/`, `planets/`: the three scenes from their own films, each
   built under one empty so it can be placed and scaled, with their data and
   the scripts that count it
@@ -38,7 +41,7 @@ world.
 ```sh
 python3 audio.py audio.wav
 blender -b --factory-startup -P build_scene.py -- --stills 73,2809 --pct 25
-./render_chunks.sh 1 4320 25 8 frames            # low-res, resumes after a crash
+./render_chunks.sh 1 4790 25 8 frames            # low-res, resumes after a crash
 ./finish.sh renders/frames qtpass-world.mp4
 ```
 
@@ -46,7 +49,15 @@ The data of each part is regenerated as in its own repository (see the
 pipelines there); `canyon/prep.py`, `city/count_tests.py` and
 `planets/count_files.py` are the counting scripts.
 
-4320 frames at 24 fps (3:00), 3840x1608 (2.39:1) at 100 %.
+4790 frames at 24 fps (3:20), 3840x1608 (2.39:1) at 100 %.
 
 Needs Blender 5.1, Python 3 with numpy, scipy, Pillow and matplotlib, ffmpeg,
 and the Lato fonts in `~/.local/share/fonts/Lato/`.
+
+## License
+
+MIT, see [LICENSE](LICENSE): take the code and make your own films.
+The QtPass logo in `assets/` is QtPass's own artwork (based on
+[Heart-padlock by AnonMoos](https://commons.wikimedia.org/wiki/File:Heart-padlock.svg))
+and is not covered by it; `canyon/data/`, `city/data/` and `planets/data/`
+are counted from QtPass's public git history.
