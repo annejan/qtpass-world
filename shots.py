@@ -33,7 +33,7 @@ from planets import timeline as PLANETS
 # stand in front of it, as mountains do of a sky), tilted to face the plain.
 CANYON_SCALE = 3.0
 CITY_AT, CITY_SCALE = (192.0, -75.0, 0.0), 1.0
-PLANETS_AT, PLANETS_TILT, PLANETS_SCALE = (45.0, 1080.0, 410.0), 60.0, 12.0
+PLANETS_AT, PLANETS_TILT, PLANETS_SCALE = (45.0, 1080.0, 310.0), 60.0, 12.0
 
 FPS = C.FPS
 FIRST_COMMIT_FLARE = C.frame_at(8.0)  # a world frame
