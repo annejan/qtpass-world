@@ -194,7 +194,7 @@ SHOTS = [
     linear(121.5, 131.0, "canyon", [
         (121.5, ("c+16", -20.0, 9.0), ("c-33", 0, 2.0), 28, 0),
         (131.0, ("c+19", -17.0, 11.0), ("c-33", 0, 2.0), 28, 0)],
-     {"exposure": 0.2}),
+     {"exposure": -0.2}),
     # today: the opening ran time back; now all twelve years build up once
     # more in one take, the camera arcing round the world, and land on today
     timed(12.0, [(0.0, 0.0), (1.0, 1.5), (8.0, 128.0), (9.2, 131.6), (12.0, 134.0)], "world", [
@@ -202,12 +202,13 @@ SHOTS = [
         (6.0, (175, -385, 34), (168, -20, 46), 28, 0),
         (12.0, (318, -290, 30), (165, -20, 50), 28, 0)],
      {"exposure": 0.8, "releases": False, "quiet": True}),
-    # and up: out of the streets, past the rim, the system above the title
+    # and up out of the streets, then back and low: the system whole in the
+    # sky, the title under it
     linear(150.0, 180.0, "world", [
         (150.0, (186, -118, 2.5), (200, -40, 14), 22, 0),
         (160.0, (172, -165, 35), (175, 0, 55), 26, 0),
-        (170.0, (150, -240, 100), (125, 110, 108), 25, 0),
-        (180.0, (140, -290, 125), (115, 160, 104), 24, 0)],
+        (170.0, (150, -250, 62), (125, 110, 84), 25, 0),
+        (180.0, (140, -330, 40), (118, 160, 66), 24, 0)],
      {"exposure": 0.7}),
 ]
 
