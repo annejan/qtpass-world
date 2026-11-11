@@ -337,8 +337,8 @@ class Sparks:
             k = int(np.clip(np.searchsorted(XK, x), 0, NK - 1))
             top = float(STATIC_TOP[k])
             f = TL.frame_of_x(x) + rnd.random()
-            if f < 37:  # before the first sample: around the first spark
-                f = 40 + rnd.uniform(0, 70)
+            if f < FLARE - 1:  # the first day's commits: after the first spark
+                f = FLARE + 2 + rnd.uniform(0, 70)
             p0 = (x + rnd.uniform(-0.04, 0.04), -0.3 - rnd.uniform(0, 0.6),
                   max(0.03, rnd.uniform(0.05, 0.95) * top))
             v = (rnd.uniform(-0.03, 0.03), -rnd.uniform(0.0, 0.05),
@@ -346,7 +346,7 @@ class Sparks:
             self.p.append((f, 2.0, p0, v, 0.0, 0.004 + 0.003 * min(top, 25),
                            author_rgb(a), 1.0))
         # the first commit, alone in the dark
-        self.p.append((36, 7.0, (X0 + 0.05, -0.22, 0.04), (0, -0.01, 0.006), 0.0,
+        self.p.append((FLARE - 2, 7.0, (X0 + 0.05, -0.22, 0.04), (0, -0.01, 0.006), 0.0,
                        0.022, (1.0, 0.78, 0.4), 1.6))
         er = np.random.default_rng(2026)
         for f in range(1, FRAMES + 1):
@@ -421,7 +421,7 @@ class HighWater:
         me = self.ob.data
         self.a = me.attributes.new("heat", "FLOAT", "POINT")
         ca = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
-        ca.data.foreach_set("color", np.tile([1.0, 0.86, 0.66, 1.0], n * 2)
+        ca.data.foreach_set("color", np.tile([1.0, 0.62, 0.3, 1.0], n * 2)
                             .astype(np.float32))
         self.co = np.zeros((n, 2, 3), dtype=np.float32)
         self.y = np.array([disp(float(XK[k]), float(STATIC_TOP[k])) - 0.06
@@ -435,7 +435,7 @@ class HighWater:
         self.co[:, 0, 0] = self.co[:, 1, 0] = XK[k]
         self.co[:, :, 1] = self.y[k][:, None]
         self.co[:, 0, 2] = top
-        self.co[:, 1, 2] = top + 0.03 + 0.012 * top
+        self.co[:, 1, 2] = top + 0.015 + 0.006 * top
         set_co(self.ob, self.co.reshape(-1, 3))
         self.a.data.foreach_set("value", np.repeat(worn, 2).astype(np.float32))
 
@@ -666,6 +666,7 @@ def rock_material():
     nt.links.new(tc.outputs["Object"], bn.inputs["Vector"])
     bump = node(nt, "ShaderNodeBump", (300, -250))
     bump.inputs["Strength"].default_value = 0.8
+    bump.inputs["Distance"].default_value = SCALE
     add = node(nt, "ShaderNodeMath", (100, -250), operation="ADD")
     nt.links.new(bn.outputs["Fac"], add.inputs[0])
     nt.links.new(wave.outputs["Fac"], add.inputs[1])
@@ -757,7 +758,7 @@ def river_material():
     nt.nodes.clear()
     out = node(nt, "ShaderNodeOutputMaterial", (600, 0))
     em = node(nt, "ShaderNodeEmission", (350, 0))
-    em.inputs["Color"].default_value = (0.13, 0.4, 1.0, 1)
+    em.inputs["Color"].default_value = (0.16, 0.34, 0.8, 1)
     tc = node(nt, "ShaderNodeTexCoord", (-700, 0))
     wave = node(nt, "ShaderNodeTexWave", (-450, 0), wave_type="BANDS",
                 bands_direction="X")
@@ -770,8 +771,8 @@ def river_material():
         ph.default_value = -(f / FPS) * 2.2
         ph.keyframe_insert("default_value", frame=f)
     mr = node(nt, "ShaderNodeMapRange", (-200, 0))
-    mr.inputs["To Min"].default_value = 0.35
-    mr.inputs["To Max"].default_value = 1.6
+    mr.inputs["To Min"].default_value = 0.1
+    mr.inputs["To Max"].default_value = 0.5
     nt.links.new(wave.outputs["Fac"], mr.inputs["Value"])
     nt.links.new(mr.outputs["Result"], em.inputs["Strength"])
     nt.links.new(em.outputs["Emission"], out.inputs["Surface"])
@@ -834,6 +835,7 @@ def sand_material():
     nt.links.new(tc.outputs["Object"], rip.inputs["Vector"])
     bump = node(nt, "ShaderNodeBump", (-200, -300))
     bump.inputs["Strength"].default_value = 0.25
+    bump.inputs["Distance"].default_value = SCALE
     nt.links.new(rip.outputs["Fac"], bump.inputs["Height"])
     nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
     return m
@@ -934,7 +936,7 @@ def build_releases(river):
     for t in TAGS:
         x, top = t["x"], t["top"]
         f0 = TL.frame_of_x(x)
-        for r, depth, gain in ((0.08, 60, 1.0), (0.6, 40, 0.035)):
+        for r, depth, gain in ((0.08, 60, 1.0),):
             bpy.ops.mesh.primitive_cylinder_add(vertices=24, radius=r, depth=depth,
                                                 location=(x, 2.5, depth / 2))
             ob = bpy.context.active_object
@@ -949,7 +951,7 @@ def build_releases(river):
                 fade.keyframe_insert("default_value", frame=f)
         ld = bpy.data.lights.new(f"Flash {t['name']}", "POINT")
         ld.color = (1.0, 0.82, 0.55)
-        ld.shadow_soft_size = 0.3
+        ld.shadow_soft_size = 0.3 * SCALE
         lo = bpy.data.objects.new(ld.name, ld)
         lo.location = (x, -1.2 - top * 0.15, 0.6 + top * 0.4)
         link(lo)
@@ -1083,13 +1085,13 @@ class FrontLight:
     def __init__(self):
         ld = bpy.data.lights.new("Front", "POINT")
         ld.color = (1.0, 0.42, 0.12)
-        ld.shadow_soft_size = 1.0
+        ld.shadow_soft_size = 1.0 * SCALE
         self.ld = ld
         self.ob = bpy.data.objects.new("Front", ld)
         link(self.ob)
         fd = bpy.data.lights.new("Flare", "POINT")
         fd.color = (1.0, 0.75, 0.42)
-        fd.shadow_soft_size = 0.02
+        fd.shadow_soft_size = 0.02 * SCALE
         fo = bpy.data.objects.new("Flare", fd)
         fo.location = (X0 + 0.05, -0.22, 0.05)
         link(fo)
@@ -1160,7 +1162,7 @@ class Crack:
         self.ob.visible_shadow = False
         self.co = np.zeros((len(verts), 3), dtype=np.float32)
         self.ld = bpy.data.lights.new("CrackLight", "POINT")
-        self.ld.shadow_soft_size = 0.4
+        self.ld.shadow_soft_size = 0.4 * SCALE
         self.lo = bpy.data.objects.new("CrackLight", self.ld)
         link(self.lo)
         x = float(XK[self.k])

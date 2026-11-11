@@ -13,6 +13,7 @@ from mathutils import Vector
 
 from . import system as S
 from . import timeline as TL
+from .liquid import Liquid
 
 COLLECTION = None
 
@@ -161,7 +162,7 @@ class Sun:
         lamp = bpy.data.lights.new("Sunlight", "POINT")
         lamp.energy = 6000
         lamp.color = (1.0, 0.9, 0.75)
-        lamp.shadow_soft_size = 1.0
+        lamp.shadow_soft_size = 1.0  # times the system's scale, in Planets
         self.lamp = lamp
         link(bpy.data.objects.new("Sunlight", lamp))
 
@@ -350,7 +351,7 @@ class Planet:
 class Shockwaves:
     """A ring of light out from the sun for every release."""
 
-    POOL = 4
+    POOL = 12   # 2015 has eleven releases in the air at once
     LIFE = 3.0 * FPS
 
     def __init__(self):
@@ -361,8 +362,9 @@ class Shockwaves:
             ob = ring_mesh(f"Wave {i}", None, 0.006, m)
             self.rings.append((ob, s))
 
-    def update(self, frame):
+    def update(self, frame, calm=1.0):
         live = [(frame - f0, name) for f0, name in self.rel if 0 <= frame - f0 < self.LIFE]
+        live = live[-self.POOL:] if calm > 0 else []  # the newest, if more than the pool
         flare = 0.0
         for i, (ob, s) in enumerate(self.rings):
             if i < len(live):
@@ -370,12 +372,12 @@ class Shockwaves:
                 u = age / self.LIFE
                 big = "rc" not in name and "beta" not in name
                 ob.scale = [1.2 + 26 * u ** 0.7] * 3
-                s.default_value = (4.0 if big else 2.0) * (1 - u) ** 2
+                s.default_value = (4.0 if big else 2.0) * (1 - u) ** 2 * calm
                 ob.hide_render = False
                 flare = max(flare, (1 - u) ** 4 * (1.0 if big else 0.5))
             else:
                 ob.hide_render = True
-        return flare
+        return flare * calm
 
 
 # ---------------------------------------------------------------- the system
@@ -398,10 +400,12 @@ class Planets:
         self.sun = Sun()
         self.planets = [Planet(k, cam) for k in S.ORDER]
         self.waves = Shockwaves()
+        self.liquid = Liquid(self.planets)
         self.bodies = bpy.data.collections.new("Planet bodies")
         for p in self.planets:
             self.bodies.objects.link(p.ob)
         self.sun.lamp.energy *= scale * scale
+        self.sun.lamp.shadow_soft_size *= scale
         lamp_ob = bpy.data.objects["Sunlight"]
         lamp_ob.light_linking.receiver_collection = self.bodies
         for ob in COLLECTION.objects:
@@ -413,13 +417,15 @@ class Planets:
         """A world point in the system's own coordinates."""
         return tuple(self.root.matrix_world.inverted() @ Vector(p))
 
-    def update(self, f, cam_world, labels=1.0):
+    def update(self, f, cam_world, labels=1.0, calm=1.0):
         bpy.context.view_layer.update()
         cam = self.local(cam_world)
         # the camera's turn (with its tracking and roll), in the system's frame
         seen = self.cam.evaluated_get(bpy.context.evaluated_depsgraph_get()).matrix_world
         rot = self.root.matrix_world.to_quaternion().inverted() @ seen.to_quaternion()
-        flare = self.waves.update(f)
+        flare = self.waves.update(f, calm)
         self.sun.update(f, flare)
         for p in self.planets:
             p.update(f, cam, rot, labels)
+        if os.environ.get("LIQUID", "1") != "0":
+            self.liquid.update()  # planets that touch run together

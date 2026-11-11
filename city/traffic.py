@@ -68,7 +68,7 @@ def _simulate():
     rnd = random.Random(5247)
     rate = _rate()
     alive, frames = [], [[] for _ in range(TL.FRAMES + 2)]
-    carry = 0.0
+    carry, born = 0.0, 0
     edge = [n for n in ((i, j) for i in K for j in K)
             if n[0] in (K[0], K[-1]) or n[1] in (K[0], K[-1])]
     for f in range(1, TL.FRAMES + 2):
@@ -82,7 +82,8 @@ def _simulate():
             lo = bisect.bisect(TIMES, t - 4 * 86400)
             hi = max(bisect.bisect(TIMES, t + 4 * 86400), lo + 1)
             kind = COMMITS[min(rnd.randrange(lo, hi), len(COMMITS) - 1)][1]
-            alive.append({"a": a, "b": b, "s": 0.0, "v": rnd.uniform(9, 15), "kind": kind,
+            born += 1
+            alive.append({"id": born, "a": a, "b": b, "s": 0.0, "v": rnd.uniform(9, 15), "kind": kind,
                           "trail": [], "age": 0, "life": rnd.uniform(4, 9) * TL.FPS,
                           "gone": None})
         carry = min(carry, 1.0)
@@ -115,7 +116,7 @@ def _simulate():
             fade_out = 1.0 if c["gone"] is None else max(1 - (c["age"] - c["gone"]) / TAIL, 0)
             glow = fade_in * fade_out
             if glow > 0:
-                frames[f].append((list(c["trail"]), glow, c["kind"]))
+                frames[f].append((list(c["trail"]), glow, c["kind"], c["id"]))
                 keep.append(c)
         alive = keep
     return frames
@@ -125,4 +126,23 @@ FRAMES = _simulate()
 
 
 def snakes(frame):
-    return FRAMES[min(max(int(frame), 1), TL.FRAMES + 1)]
+    """The snakes at a frame; between two frames (slow motion) every snake
+    slides along its own trail, as each point of a trail is where the point
+    before it was a frame earlier."""
+    f = min(max(frame, 1.0), TL.FRAMES + 1.0)
+    i = min(int(f), TL.FRAMES)
+    u = f - i
+    if u < 1e-6:
+        return [(pts, glow, kind) for pts, glow, kind, _ in FRAMES[i]]
+    nxt = {n: (pts, glow) for pts, glow, _, n in FRAMES[i + 1]}
+    out, seen = [], set()
+    for pts, glow, kind, n in FRAMES[i]:
+        seen.add(n)
+        if n in nxt:
+            pts2, glow2 = nxt[n]
+            out.append(([(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u)
+                         for a, b in zip(pts, pts2)], glow + (glow2 - glow) * u, kind))
+        else:
+            out.append((pts, glow * (1 - u), kind))
+    out += [(pts, glow * u, kind) for pts, glow, kind, n in FRAMES[i + 1] if n not in seen]
+    return out

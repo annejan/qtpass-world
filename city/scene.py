@@ -379,13 +379,27 @@ def build_ground():
     nt.links.new(street.outputs[0], st.inputs[0])
     nt.links.new(self_street.outputs[0], st.inputs[1])
     bsdf = node(nt, "ShaderNodeBsdfPrincipled", (500, 100))
-    # wet asphalt in town, giving way to the canyon's sand at the edge
+    # wet asphalt in town, giving way to the canyon's sand along a ragged
+    # edge (the distance from the centre, pushed about by noise), and
+    # fading out altogether beyond it so the plane itself is never seen
+    rag = node(nt, "ShaderNodeTexNoise", (-700, -600))
+    rag.inputs["Scale"].default_value = 0.045
+    rag.inputs["Detail"].default_value = 3.0
+    nt.links.new(tc.outputs["Object"], rag.inputs["Vector"])
+    far = node(nt, "ShaderNodeMath", (-500, -600), operation="MULTIPLY_ADD")
+    far.inputs[1].default_value = 44.0
+    nt.links.new(rag.outputs["Fac"], far.inputs[0])
+    nt.links.new(ln.outputs["Value"], far.inputs[2])  # the distance, 0 to 44 m further
     sand = node(nt, "ShaderNodeMapRange", (-300, -550))
-    sand.inputs["From Min"].default_value = 62.0
-    sand.inputs["From Max"].default_value = 84.0
-    nt.links.new(ln.outputs["Value"], sand.inputs["Value"])
+    sand.inputs["From Min"].default_value = 56.0
+    sand.inputs["From Max"].default_value = 92.0
+    nt.links.new(far.outputs[0], sand.inputs["Value"])
+    gone = node(nt, "ShaderNodeMapRange", (-300, -750))
+    gone.inputs["From Min"].default_value = 84.0
+    gone.inputs["From Max"].default_value = 104.0
+    nt.links.new(far.outputs[0], gone.inputs["Value"])
     base = node(nt, "ShaderNodeMix", (300, 300), data_type="RGBA")
-    base.inputs["A"].default_value = (0.012, 0.013, 0.016, 1)
+    base.inputs["A"].default_value = (0.02, 0.021, 0.026, 1)
     base.inputs["B"].default_value = (0.25, 0.18, 0.12, 1)
     nt.links.new(sand.outputs[0], base.inputs["Factor"])
     nt.links.new(base.outputs["Result"], bsdf.inputs["Base Color"])
@@ -402,8 +416,14 @@ def build_ground():
     nt.links.new(matte.outputs["Result"], bsdf.inputs["Roughness"])
     bsdf.inputs["Emission Color"].default_value = (1.0, 0.55, 0.2, 1)
     nt.links.new(st.outputs[0], bsdf.inputs["Emission Strength"])
-    nt.links.new(bsdf.outputs[0], out.inputs[0])
-    bpy.ops.mesh.primitive_plane_add(size=180)
+    clear = node(nt, "ShaderNodeBsdfTransparent", (500, -150))
+    fadeout = node(nt, "ShaderNodeMixShader", (720, 0))
+    nt.links.new(gone.outputs[0], fadeout.inputs["Fac"])
+    nt.links.new(bsdf.outputs[0], fadeout.inputs[1])
+    nt.links.new(clear.outputs[0], fadeout.inputs[2])
+    nt.links.new(fadeout.outputs[0], out.inputs[0])
+    # just under the streets' zero, clear of the canyon's river at 0
+    bpy.ops.mesh.primitive_plane_add(size=180, location=(0, 0, -0.03))
     g = bpy.context.active_object
     g.name = "Ground"
     g.data.materials.append(m)
@@ -480,20 +500,21 @@ class Searchlights:
             self.beams.append((ob, fade.outputs[0], rnd.uniform(0, 6.28),
                                rnd.uniform(0.25, 0.45), rnd.choice((-1, 1))))
 
-    def update(self, frame):
+    def update(self, frame, sweep=None):
+        """sweep: the seconds the beams have swept (the world's, unless the
+        film says otherwise: they should not whirl when time races)."""
         t = TL.t_of(frame)
-        n = TL.ci_at(TL.date_at(frame))
+        s = t if sweep is None else sweep
+        # workflows over the last second and a half: beams fade in and out
+        n = [TL.ci_at(TL.date_at(frame - k)) for k in range(36)]
         for i, (ob, fade, ph, speed, sense) in enumerate(self.beams):
-            on = i < n
-            ob.hide_render = not on
-            if not on:
+            on = sum(i < m for m in n) / len(n)
+            ob.hide_render = on <= 0
+            if on <= 0:
                 continue
-            born = TL.frame_of_date(next((s["t"] for s in TL.SAMPLES if s["ci"] > i),
-                                         TL.T_NOW))
-            f = min(max((frame - born) / 30, 0), 1)
-            fade.default_value = 0.2 * f
-            tilt = math.radians(22 + 8 * math.sin(t * speed * 0.7 + ph)) * (1 - 0.9 * TL.peak(t))
-            spin = ph + sense * t * speed
+            fade.default_value = 0.2 * on
+            tilt = math.radians(22 + 8 * math.sin(s * speed * 0.7 + ph)) * (1 - 0.9 * TL.peak(t))
+            spin = ph + sense * s * speed
             # lean towards the city a little: aim at a point above it
             ob.rotation_euler = (tilt, 0, spin)
 
@@ -539,10 +560,11 @@ class Fireworks:
         self.lo = bpy.data.objects.new("Burst", self.flash)
         link(self.lo)
 
-    def update(self, frame):
+    def update(self, frame, calm=1.0):
+        """calm 0..1: no fireworks while time races (they would only strobe)."""
         pts, cols, heat = [], [], []
         flash, fpos, fcol = 0.0, (0, 0, 30), (1, 1, 1)
-        for f0, c, dirs, col in self.bursts:
+        for f0, c, dirs, col in self.bursts if calm > 0 else ():
             tau = (frame - f0) / FPS
             if tau < 0 or tau > 2.6:
                 continue
@@ -553,13 +575,15 @@ class Fireworks:
             for q in p:
                 pts.append(q)
                 cols.append(col)
-                heat.append(life ** 1.5 * (0.6 + 0.4 * math.sin(frame * 1.7 + q[0])))
+                heat.append(calm * life ** 1.5 * (0.6 + 0.4 * math.sin(frame * 1.7 + q[0])))
             e = max(1 - tau / 0.5, 0)
             if e > flash:
                 flash, fpos, fcol = e, tuple(c), col
         if self.ob is not None:
+            me = self.ob.data
             bpy.data.objects.remove(self.ob)
-        self.flash.energy = 60000 * flash * LIGHT
+            bpy.data.meshes.remove(me)  # or one mesh a frame is left behind
+        self.flash.energy = 60000 * flash * LIGHT * calm
         self.flash.color = fcol
         self.lo.location = fpos
         if not pts:
@@ -614,7 +638,9 @@ class Traffic:
 
     def update(self, frame):
         if self.ob is not None:
+            me = self.ob.data
             bpy.data.objects.remove(self.ob)
+            bpy.data.meshes.remove(me)
             self.ob = None
         verts, faces, cols, heat = [], [], [], []
         half = 0.2
@@ -731,12 +757,12 @@ class City:
             bpy.context.scene.collection.objects.unlink(ob)
             link(ob)
 
-    def update(self, f):
+    def update(self, f, calm=1.0, sweep=None):
         t = TL.t_of(f)
         for tw in self.towers:
             tw.update(f)
-        self.beams.update(f)
-        self.fireworks.update(f)
+        self.beams.update(f, sweep)
+        self.fireworks.update(f, calm)
         self.traffic.update(f)
         # the streets light up with the city
         total = TL.total_at(TL.date_at(f))

@@ -71,7 +71,7 @@ def place(k, frame, depth=0):
     if d and depth < 3 and frame < BIRTH[k] + DRIFT:
         u = _ease((frame - BIRTH[k]) / DRIFT)
         q = place(d, frame, depth + 1)
-        gap = size(d, frame) + 0.35
+        gap = size(d, frame) * 0.8  # it buds out of its donor's surface
         a = S.PHASE[k]
         moon = (q[0] + gap * math.cos(a), q[1] + gap * math.sin(a), q[2] + 0.2)
         p = tuple(moon[i] + (p[i] - moon[i]) * u for i in range(3))

@@ -272,6 +272,28 @@ def world_frame(frame):
 _WS = [world_sec(C.t_of(f)) for f in range(1, FILM_FRAMES + 2)]
 
 
+def calm(frame):
+    """1 while the world's clock runs at up to twice its speed, 0 from six
+    times on: what flashes for a moment (fireworks, shockwaves) is left out
+    when time races, where it could only strobe."""
+    i = min(max(int(frame), 2), FILM_FRAMES)
+    speed = abs(_WS[i] - _WS[i - 2]) / 2 * FPS  # world frames per film frame
+    return min(max(1 - (speed - 2) / 4, 0.0), 1.0)
+
+
+def _sweep():
+    """Seconds swept by what turns at its own pace (the searchlights): the
+    world's clock, but never faster than the film's, and not across cuts."""
+    out, s = [0.0, 0.0], 0.0
+    for f in range(2, FILM_FRAMES + 2):
+        s += min(max(_WS[f - 1] - _WS[f - 2], -1 / FPS), 1 / FPS)
+        out.append(s)
+    return out
+
+
+_SWEEP = _sweep()
+
+
 def film_times(w):
     """Every film second at which the world's clock passes world second w
     going forwards (a replay passes it again)."""
@@ -356,6 +378,8 @@ def camera(frame):
         "releases": opts.get("releases", True),
         "shot": i,
         "world": wf,
+        "calm": calm(frame),
+        "sweep": _SWEEP[min(max(int(frame), 1), FILM_FRAMES + 1)],
     }
 
 
