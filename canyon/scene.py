@@ -1067,7 +1067,7 @@ class Plume:
     def update(self, st, frame):
         _, hi, _, kc, c = st
         top = float(hi[-1, kc])
-        self.ob.location = (c - 6, 9, top + 24 - 4)
+        self.ob.location = (c - 4, 6, top + 24 - 13)  # rooted in the rock
         self.ob.hide_render = TL.eruption(frame_t(frame)) <= 0.001
 
 

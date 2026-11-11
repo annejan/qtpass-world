@@ -37,6 +37,13 @@ def _sizes():
 SIZE = _sizes()
 
 
+def size(k, frame):
+    """Radius of body k at a frame; frames may be fractional."""
+    f = min(max(frame, 1.0), FRAMES + 1.0)
+    i = min(int(f), FRAMES)
+    return SIZE[k][i] + (SIZE[k][i + 1] - SIZE[k][i]) * (f - i)
+
+
 def lines_at(k, frame):
     return S.SIZES[S.sample_at(date_at(frame))].get(k, 0)
 
@@ -64,7 +71,7 @@ def place(k, frame, depth=0):
     if d and depth < 3 and frame < BIRTH[k] + DRIFT:
         u = _ease((frame - BIRTH[k]) / DRIFT)
         q = place(d, frame, depth + 1)
-        gap = SIZE[d][frame] + 0.35
+        gap = size(d, frame) + 0.35
         a = S.PHASE[k]
         moon = (q[0] + gap * math.cos(a), q[1] + gap * math.sin(a), q[2] + 0.2)
         p = tuple(moon[i] + (p[i] - moon[i]) * u for i in range(3))

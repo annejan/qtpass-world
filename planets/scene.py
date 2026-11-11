@@ -305,7 +305,7 @@ class Planet:
     def update(self, frame, cam_loc, labels=1.0):
         k = self.k
         on = TL.alive(k, frame)
-        r = TL.SIZE[k][frame] if on else 0.0
+        r = TL.size(k, frame) if on else 0.0
         hidden = r < 0.01
         self.ob.hide_render = hidden
         self.label.hide_render = hidden

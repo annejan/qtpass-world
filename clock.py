@@ -91,7 +91,10 @@ def frame_at(sec):
 
 
 def date_at(frame):
-    return DATE[min(max(int(frame), 1), FRAMES + 1)]
+    """Unix time at a frame; frames may be fractional (slow motion)."""
+    f = min(max(frame, 1.0), FRAMES + 1.0)
+    i = min(int(f), FRAMES)
+    return DATE[i] + (DATE[i + 1] - DATE[i]) * (f - i)
 
 
 def frame_of_date(t):

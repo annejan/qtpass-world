@@ -229,8 +229,9 @@ def setup_render(pct, samples):
     ee.taa_render_samples = samples
     for prop, val in (("use_raytracing", True), ("use_shadows", True),
                       ("shadow_pool_size", "1024"),
-                      ("volumetric_end", 1500.0), ("volumetric_tile_size", "4"),
-                      ("volumetric_samples", 64), ("use_volumetric_shadows", True)):
+                      ("volumetric_end", 800.0), ("volumetric_tile_size", "4"),
+                      ("volumetric_samples", 128), ("volumetric_sample_distribution", 0.85),
+                      ("use_volumetric_shadows", True)):
         if hasattr(ee, prop):
             try:
                 setattr(ee, prop, val)
@@ -267,16 +268,22 @@ class World:
             c.light_linking.link_state = "EXCLUDE"
 
     def update(self, f):
+        """Film frame f: the camera follows the film, the world shows the
+        moment of its own clock that the shot asks for."""
         v = self.camera.set(f)
-        self.canyon.update(f)
-        self.city.update(f)
-        self.planets.update(f, v["cam"], v.get("labels", 1.0))
+        w = v["world"]
+        s = bpy.context.scene
+        s.frame_set(int(w), subframe=w - int(w))  # keyed lamps and fades
+        self.canyon.update(w)
+        self.city.update(w)
+        self.planets.update(w, v["cam"], v.get("labels", 1.0))
 
 
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     opts = {"pct": 25, "stills": "", "anim": False, "samples": 16,
-            "start": 1, "end": FRAMES, "out": "frames", "save": "", "prefix": "still"}
+            "start": 1, "end": shots.FILM_FRAMES, "out": "frames", "save": "",
+            "prefix": "still"}
     i = 0
     while i < len(argv):
         k = argv[i].lstrip("-")
@@ -292,14 +299,12 @@ def main():
     s = bpy.context.scene
 
     def render(f, path):
-        s.frame_set(f)
         w.update(f)
         s.render.filepath = path
         bpy.ops.render.render(write_still=True)
 
     if opts["save"]:
         f = int(opts["stills"].split(",")[0]) if opts["stills"] else 1
-        s.frame_set(f)
         w.update(f)
         bpy.ops.wm.save_as_mainfile(filepath=os.path.join(HERE, opts["save"]))
     for f in [int(v) for v in opts["stills"].split(",") if v]:

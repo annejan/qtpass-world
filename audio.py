@@ -27,21 +27,33 @@ from planets import system as S
 from planets import timeline as PLANETS
 
 SR = 48000
-N = C.SECONDS * SR
+SECONDS = shots.FILM_SECONDS
+N = int(SECONDS * SR)
 T = np.arange(N) / SR
+# the world's second at every film frame: sounds of the world play where
+# the film passes their moment going forwards, so a replay sounds again
+WS = np.array([shots.world_sec(C.t_of(f)) for f in range(1, shots.FILM_FRAMES + 2)])
+FT = np.array([C.t_of(f) for f in range(1, shots.FILM_FRAMES + 2)])
+
+
+def film_times(w):
+    a, b = WS[:-1], WS[1:]
+    i = np.nonzero((a < w) & (b >= w))[0]
+    return list(FT[i] + (w - a[i]) / (b[i] - a[i]) / C.FPS)
 rng = np.random.default_rng(2014)
 rnd = random.Random(5246)
 
 
 def keyed(keys):
-    """Smooth envelope over the whole film from (second, value) keys."""
-    grid = np.arange(0, C.SECONDS + 1, 0.05)
+    """Smooth envelope over the whole film from (film second, value) keys."""
+    grid = np.arange(0, SECONDS + 1, 0.05)
     return np.interp(T, grid, [C.interp(keys, t) for t in grid])
 
 
-def per_second(fn):
-    grid = np.arange(0, C.SECONDS + 1, 0.05)
-    return np.interp(T, grid, [fn(t) for t in grid])
+def per_world_second(fn):
+    """An envelope fn(world second), as the film shows the world's clock."""
+    grid = np.arange(0, SECONDS + 1, 0.05)
+    return np.interp(T, grid, [fn(shots.world_sec(t)) for t in grid])
 
 
 def lowpass(x, hz, order=2):
@@ -61,8 +73,13 @@ def hz(midi):
 STEMS = {k: np.zeros((N, 2)) for k in ("bed", "canyon", "city", "planets", "all")}
 
 
-def add(stem, t, g, pan=0.5, amp=1.0):
-    """Mix mono g into a stem at second t, panned 0 (left) .. 1 (right)."""
+def add(stem, t, g, pan=0.5, amp=1.0, world=True):
+    """Mix mono g into a stem at world second t (at every film moment that
+    shows it), or at film second t with world=False; panned 0 .. 1."""
+    if world:
+        for tf in film_times(t):
+            add(stem, tf, g, pan, amp, world=False)
+        return
     out = STEMS[stem]
     i = int(t * SR)
     if i >= N or i + len(g) <= 0:
@@ -74,25 +91,27 @@ def add(stem, t, g, pan=0.5, amp=1.0):
     out[i:j, 1] += g[:j - i] * amp * pan
 
 
-def bell(stem, t, f0, amp, pan=0.5, decay=3.0):
+def bell(stem, t, f0, amp, pan=0.5, decay=3.0, world=True):
     L = int(decay * 2.5 * SR)
     tt = np.arange(L) / SR
     g = sum(a * np.sin(2 * np.pi * f0 * p * tt) * np.exp(-tt * (1 + p) / decay)
             for p, a in ((1, 1), (2.76, 0.45), (5.4, 0.2), (8.9, 0.08)))
-    add(stem, t, g, pan, amp)
+    add(stem, t, g, pan, amp, world)
 
 
-def boom(stem, t, amp, base=42, length=2.5):
+def boom(stem, t, amp, base=42, length=2.5, world=True):
     L = int(length * SR)
     tb = np.arange(L) / SR
     fb = base * np.exp(-tb * 0.7) + 30
     g = np.sin(2 * np.pi * np.cumsum(fb) / SR) * np.exp(-tb * 1.8) * (1 - np.exp(-tb * 200))
-    add(stem, t, g, 0.5, amp)
+    add(stem, t, g, 0.5, amp, world)
 
 
-night = per_second(lambda t: 1 - C.dusk(t))
-erupt = per_second(C.eruption)
-size = per_second(lambda t: min(CITY.total_at(C.date_at(C.frame_at(t))) / 1256, 1))
+night = per_world_second(lambda w: 1 - C.dusk(w))
+erupt = per_world_second(C.eruption)
+size = per_world_second(lambda w: min(CITY.total_at(C.date_at(w * C.FPS + 1)) / 1256, 1))
+BOOM = film_times(C.CLIMAX)[0]  # the peak, once, in the wide
+REWIND = (7.0, 10.3)  # the opening runs twelve years back
 
 # ---------------------------------------------------------------- the bed
 bed = STEMS["bed"]
@@ -103,21 +122,22 @@ for ch in range(2):
     wind = (lowpass(w, 380) * 2.5 + bandpass(w, 500, 1800) * 0.25) * lfo
     bed[:, ch] += wind * (0.10 + 0.08 * night) * (1 - 0.5 * erupt) * (1 - 0.5 * size)
 
-CHORDS = [  # (from second, MIDI notes)
-    (0, [38, 45, 50, 53]),       # Dm: the first commit
-    (14, [34, 41, 46, 50]),      # Bb: MainWindow, the first layers
-    (30, [41, 48, 53, 57]),      # F: the first split, the first test
-    (62, [38, 45, 52]),          # Dm9, sparse: the quiet years
-    (72, [38, 45, 50, 53]),      # Dm: 2026 begins
-    (88, [34, 41, 46, 50, 53]),  # Bb
-    (101, [36, 43, 48, 52, 55]),  # C: September
-    (C.CLIMAX, [38, 45, 50, 54, 57]),  # D major: the peak
-    (150, [38, 45, 52, 54, 57]),  # Dsus2/6, open: up into the sky
+CHORDS = [  # (from film second, MIDI notes)
+    (0, [38, 45, 52, 54, 57]),   # Dsus2/6: today
+    (REWIND[1], [38, 45, 50, 53]),  # Dm: the first commit
+    (shots.film(14), [34, 41, 46, 50]),  # Bb: MainWindow, the first layers
+    (shots.film(30), [41, 48, 53, 57]),  # F: the first split, the first test
+    (shots.film(62), [38, 45, 52]),      # Dm9, sparse: the quiet years
+    (shots.film(72), [38, 45, 50, 53]),  # Dm: 2026 begins
+    (shots.film(88), [34, 41, 46, 50, 53]),  # Bb
+    (shots.film(101), [36, 43, 48, 52, 55]),  # C: September
+    (BOOM, [38, 45, 50, 54, 57]),        # D major: the peak
+    (shots.film(150), [38, 45, 52, 54, 57]),  # Dsus2/6, open: up into the sky
 ]
 drone = np.zeros(N)
 fade = int(2.5 * SR)
 for i, (t0, notes) in enumerate(CHORDS):
-    t1 = CHORDS[i + 1][0] if i + 1 < len(CHORDS) else C.SECONDS
+    t1 = CHORDS[i + 1][0] if i + 1 < len(CHORDS) else SECONDS
     a, b = int(t0 * SR), min(int(t1 * SR) + fade, N)
     tt = T[a:b]
     g = np.ones(b - a)
@@ -131,10 +151,26 @@ for i, (t0, notes) in enumerate(CHORDS):
                 drone[a:b] += np.sin(2 * np.pi * (f * h + det) * tt
                                      + rng.uniform(0, 6.28)) * amp * g
 drone = lowpass(drone, 1400) / 30
-level = keyed([(0, 0), (4, 0.4), (62, 0.55), (64, 0.35), (72, 0.45), (101, 0.6),
-               (C.CLIMAX, 0.9), (131, 0.75), (165, 0.7), (C.SECONDS, 0)])
+level = keyed([(0, 0), (3, 0.6), (REWIND[0], 0.6), (REWIND[0] + 1.5, 0.1), (REWIND[1], 0.15),
+               (REWIND[1] + 4, 0.4), (shots.film(62), 0.55), (shots.film(64), 0.35),
+               (shots.film(72), 0.45), (shots.film(101), 0.6), (BOOM, 0.9),
+               (shots.film(131), 0.75), (shots.film(165), 0.7), (SECONDS, 0)])
 bed[:, 0] += drone * level
 bed[:, 1] += np.roll(drone, 240) * level
+
+# the rewind: tape running backwards, a reversed swell and a falling sweep
+a, b = int(REWIND[0] * SR), int(REWIND[1] * SR)
+tr = np.arange(b - a) / SR
+u = tr / tr[-1]
+whoosh = bandpass(rng.standard_normal(b - a), 200, 6000) * np.sin(np.pi * u) ** 1.5
+sweep = np.sin(2 * np.pi * np.cumsum(900 * (1 - u) ** 2 + 60) / SR) * np.sin(np.pi * u) ** 2
+rev = np.zeros(b - a)
+L = min(int(2.5 * SR), b - a)
+tt = np.arange(L) / SR
+cymbal = bandpass(rng.standard_normal(L), 3000, 12000) * np.exp(-tt * 2.0)
+rev[-L:] = cymbal[::-1]
+for ch in range(2):
+    STEMS["all"][a:b, ch] += (whoosh * 0.18 + sweep * 0.05 + rev * 0.12) * (1 if ch else 0.92)
 
 # ---------------------------------------------------------------- canyon
 # a soft ping for every commit as the front passes it, pitched by author
@@ -270,22 +306,22 @@ for f0, name in PLANETS.releases():
     bell("all", t + 0.02, hz(81 if big else 86), 0.07, decay=2.5)
 
 # September: a riser into the peak, a deep boom under three bells
-rise = keyed([(0, 0), (101, 0), (C.CLIMAX - 0.05, 1), (C.CLIMAX + 0.3, 0), (C.SECONDS, 0)])
+rise = keyed([(0, 0), (shots.film(101), 0), (BOOM - 0.05, 1), (BOOM + 0.3, 0), (SECONDS, 0)])
 noise = bandpass(rng.standard_normal(N), 400, 6000)
 for ch in range(2):
     STEMS["all"][:, ch] += np.roll(noise, ch * 31) * rise ** 2 * 0.05
-boom("all", C.CLIMAX, 0.6, base=48, length=3.0)
-bell("all", C.CLIMAX, hz(74), 0.16, 0.45, decay=5)
-bell("all", C.CLIMAX + 0.02, hz(78), 0.1, 0.55, decay=5)
-bell("all", C.CLIMAX + 0.04, hz(81), 0.08, 0.5, decay=5)
+boom("all", BOOM, 0.6, base=48, length=3.0, world=False)
+bell("all", BOOM, hz(74), 0.16, 0.45, decay=5, world=False)
+bell("all", BOOM + 0.02, hz(78), 0.1, 0.55, decay=5, world=False)
+bell("all", BOOM + 0.04, hz(81), 0.08, 0.5, decay=5, world=False)
 
 # ---------------------------------------------------------------- the mix
 # each shot turns up the part it shows; a wide shot hears all three
 FOCUS = {"canyon": (1.0, 0.3, 0.3), "city": (0.3, 1.0, 0.3),
          "planets": (0.3, 0.3, 1.0), "world": (0.75, 0.75, 0.75)}
-gains = np.zeros((C.SECONDS * 20 + 1, 3))
+gains = np.zeros((int(SECONDS * 20) + 1, 3))
 for n in range(len(gains)):
-    space_ = shots.SHOTS[shots.shot_index(n / 20)][2]
+    space_ = shots.SHOTS[shots.shot_index(n / 20)]["space"]
     space_ = "planets" if space_.startswith("follow:") else space_
     gains[n] = FOCUS[space_]
 k = int(0.3 * 20)  # ease over 0.3 s round each cut
@@ -306,7 +342,7 @@ for ch in range(2):
     ir /= np.sqrt(np.sum(ir ** 2))
     wet[:, ch] = signal.fftconvolve(out[:, ch], ir)[:N]
 mix = out * 0.8 + wet * 0.35
-mix *= (np.minimum(T / 0.5, 1) * np.clip((C.SECONDS - T) / 3.0, 0, 1))[:, None]
+mix *= (np.minimum(T / 0.5, 1) * np.clip((SECONDS - T) / 3.0, 0, 1))[:, None]
 mix = np.tanh(mix / np.max(np.abs(mix)) * 1.4) / np.tanh(1.4) * 0.9
 
 path = sys.argv[1] if len(sys.argv) > 1 else "audio.wav"
@@ -315,6 +351,6 @@ with wave.open(path, "wb") as w:
     w.setsampwidth(2)
     w.setframerate(SR)
     w.writeframes((mix * 32767).astype("<i2").tobytes())
-print("wrote", path, f"{C.SECONDS} s,", len(times), "commit pings,", len(events), "test blips,",
+print("wrote", path, f"{SECONDS:.1f} s,", len(times), "commit pings,", len(events), "test blips,",
       len(S.ORDER), "classes,", len(PLANETS.releases()), "releases, peak at",
-      round(C.CLIMAX, 2), "s")
+      round(BOOM, 2), "s")

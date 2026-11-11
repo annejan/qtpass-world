@@ -40,7 +40,9 @@ for _f in range(2, len(CURSOR)):  # keep it monotone
 
 
 def cursor_x(frame):
-    return CURSOR[min(max(int(frame), 1), FRAMES + 1)]
+    f = min(max(frame, 1.0), FRAMES + 1.0)
+    i = min(int(f), FRAMES)
+    return CURSOR[i] + (CURSOR[i + 1] - CURSOR[i]) * (f - i)
 
 
 def now_ts(frame):
