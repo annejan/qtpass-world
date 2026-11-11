@@ -1,0 +1,10 @@
+renders/
+*.mp4
+*.wav
+*.blend
+*.blend1
+__pycache__/
+shot*.jpg
+*.log
+domains.json
+look-*.png
