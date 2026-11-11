@@ -858,10 +858,7 @@ def build_mesas(mat):
         o = bpy.context.active_object
         o.name = f"Mesa{i}"
         h = rnd.uniform(8, 30)
-        x = rnd.uniform(-150, 230)
-        if 0 < x < 90:  # behind the solar system: low, so the planets stand in the sky
-            h = min(h, 11.0)
-        o.location = (x, rnd.uniform(140, 330), h - 3)
+        o.location = (rnd.uniform(-150, 230), rnd.uniform(140, 330), h - 3)
         o.scale = (rnd.uniform(20, 55), rnd.uniform(12, 30), h)
         sub = o.modifiers.new("s", "SUBSURF")
         sub.subdivision_type = "SIMPLE"

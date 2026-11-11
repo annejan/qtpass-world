@@ -29,10 +29,11 @@ from planets import timeline as PLANETS
 # The canyon is three times the size of its own film: the wall runs along x
 # from 3 to 230 m with its face towards -y. The city stands on the plain in
 # front of the 2026 end of the wall, at its own film's size; the solar
-# system hangs in the sky behind the wall, tilted to face the plain.
+# system hangs in the sky a kilometre off, beyond the far mesas (so they
+# stand in front of it, as mountains do of a sky), tilted to face the plain.
 CANYON_SCALE = 3.0
 CITY_AT, CITY_SCALE = (192.0, -75.0, 0.0), 1.0
-PLANETS_AT, PLANETS_TILT, PLANETS_SCALE = (115.0, 160.0, 150.0), 60.0, 4.0
+PLANETS_AT, PLANETS_TILT, PLANETS_SCALE = (45.0, 1080.0, 410.0), 60.0, 12.0
 
 FPS = C.FPS
 FIRST_COMMIT_FLARE = C.frame_at(8.0)  # a world frame
@@ -111,8 +112,8 @@ SHOTS = [
     # November 2016: QtPassSettings, then Pass, ImitatePass and RealPass bud
     # off MainWindow (34.6 - 35.1 s); from under it, the sky behind
     linear(31.5, 37.5, "under:mainwindow", [
-        (31.5, (11, -15, -13), (0, 0, 1.0), 30, 0),
-        (37.5, (9, -13, -11), (0, 0, 1.0), 30, 0)],
+        (31.5, (33, -45, -39), (0, 0, 3.0), 30, 0),
+        (37.5, (27, -39, -33), (0, 0, 3.0), 30, 0)],
      {"labels": 1}),
     # 13 December 2016: the first test, one window in an empty town (39.1 s)
     linear(37.5, 44.0, "city", [
@@ -202,13 +203,12 @@ SHOTS = [
         (6.0, (175, -385, 34), (168, -20, 46), 28, 0),
         (12.0, (318, -290, 30), (165, -20, 50), 28, 0)],
      {"exposure": 0.8, "releases": False, "quiet": True}),
-    # and up out of the streets, then back and low: the system whole in the
-    # sky, the title under it
+    # and up: out of the streets, past the rim, the system above the title
     linear(150.0, 180.0, "world", [
         (150.0, (186, -118, 2.5), (200, -40, 14), 22, 0),
         (160.0, (172, -165, 35), (175, 0, 55), 26, 0),
-        (170.0, (150, -250, 62), (125, 110, 84), 25, 0),
-        (180.0, (140, -330, 40), (118, 160, 66), 24, 0)],
+        (170.0, (150, -240, 100), (125, 110, 108), 25, 0),
+        (180.0, (140, -290, 125), (115, 160, 104), 24, 0)],
      {"exposure": 0.7}),
 ]
 
