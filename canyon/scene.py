@@ -41,7 +41,8 @@ X0, X1 = TL.X0, TL.X1
 DEPTH = 18.0
 FPS, FRAMES = TL.FPS, TL.FRAMES
 LOGO = os.path.join(os.path.dirname(HERE), "assets", "qtpass-logo.png")
-LATO = os.path.expanduser("~/.local/share/fonts/Lato/Lato-Light.ttf")
+LATO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets",
+                    "fonts", "Lato-Light.ttf")
 FOSSIL = (2.8, 0.25, 0.34)  # x, z centre and size (m) of the logo in the 2014 rock
 
 XK = np.array([c["x"] for c in COLS])

@@ -28,7 +28,8 @@ def link(ob):
     return ob
 
 FPS, FRAMES = TL.FPS, TL.FRAMES
-LATO = os.path.expanduser("~/.local/share/fonts/Lato/Lato-Bold.ttf")
+LATO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets",
+                    "fonts", "Lato-Bold.ttf")
 FH = 0.8          # floor height
 SPACING = 11.0    # one block per suite
 PASS = (0.3, 1.0, 0.45)
